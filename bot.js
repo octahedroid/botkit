@@ -94,27 +94,27 @@ controller.hears(['hello'], incomingEvent, function(bot, message) {
   bot.reply(message, 'Hello? Hello? Hello?. Is there anybody in there?')
 });
 
-
-controller.hears(['hi'], incomingEvent, function(bot, message) {
-  bot.reply(message, 'Hi ... I heard a message.')
+controller.hears(['hola', 'que tal'], incomingEvent, function(bot, message) {
+  bot.reply(message, 'Hola que tal.')
 });
 
-controller.hears(['ola'], incomingEvent, function(bot, message) {
-  bot.reply(message, 'ola ... ke ase');
+controller.hears(['Open the pod bay doors'], incomingEvent, function(bot, message) {
 
-    bot.api.reactions.add({
-        timestamp: message.ts,
-        channel: message.channel,
-        name: 'robot_face',
-    }, function(err, res) {
-        if (err) {
-            bot.botkit.log('Failed to add emoji reaction :(', err);
+  bot.reply(message, '...');
+
+  bot.reply(message, {
+      attachments:[
+        {
+          "title": "I’m sorry, Dave, I’m afraid I can’t do that.",
+          "image_url": "https://i.ytimg.com/vi/NJ-CcFcM9Hw/maxresdefault.jpg",
+          "color": "#ff0000"
         }
-    });
+      ]
+  });
 
 });
 
-controller.hears(['show ip information'], 'direct_mention', function(bot, message) {
+controller.hears(['show ip information'], incomingEvent, function(bot, message) {
 
   bot.reply(message, 'fetching information ...');
 
