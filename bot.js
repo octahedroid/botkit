@@ -51,7 +51,9 @@ This bot demonstrates many of the core features of Botkit:
     -> http://howdy.ai/botkit
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
 var env = require('node-env-file');
+
 env(__dirname + '/.env');
 
 if (!process.env.clientId || !process.env.clientSecret || !process.env.PORT) {
@@ -114,37 +116,145 @@ controller.hears(['Open the pod bay doors'], incomingEvent, function(bot, messag
 
 });
 
-controller.hears(['show ip information'], incomingEvent, function(bot, message) {
+controller.hears(['show crypto prices'], incomingEvent, function(bot, message) {
 
   bot.reply(message, 'fetching information ...');
 
   request({
     method: 'get',
-    uri: 'https://api.ipify.org?format=json',
+    uri: 'https://api.bitso.com/v3/ticker',
     json: true,
   }, function (err, response, json) {
     
-    console.log('error: ', err); // Handle the error if one occurred
-    console.log('statusCode: ', response && response.statusCode); // Check 200 or such
-    console.log('IP Address: ', json);
+    let colors = [ 'good', 'warning', 'danger'];
 
-    bot.reply( message, 'Your IP Address: ' +  json.ip );
+    controller.log(JSON.stringify(json));
 
-    request({
-      method: 'get',
-      uri: 'https://ipfind.co/?ip='+json.ip,
-      json: true,
-    }, function (err, response, ipfind) {
-  
-      bot.reply( message, 'Country: ' +  ipfind.country );
-      bot.reply( message, 'Country: ' +  ipfind.continent );
-      bot.reply( message, 'Country: ' +  ipfind.city );
-      bot.reply( message, 'Country: ' +  ipfind.region );
-      bot.reply( message, 'Country: ' +  ipfind.timezone );
-    });
+    for(var i = 0; i < json.payload.length; i++) {
+        bot.reply(message, {
+          attachments: [
+            {
+              "title": json.payload[i].book,
+              "text":  JSON.stringify(json.payload[i], undefined, 2),
+              "color":  colors[Math.floor(Math.random()*colors.length)]
+            }
+          ]
+      });
+    }
+
   });
 
 });
+
+// botkit-middleware-witai
+// var wit = require('botkit-middleware-witai')({
+//   // token: process.env.wit,
+//   token: '',
+// });
+
+// var bot = controller.spawn({
+//   // token: process.env.token,
+//   token: 'eOg5Q4lwLYr0Et0y6Jrq5Ge0'
+// });
+
+// controller.middleware.receive.use(wit.receive);
+
+// controller.hears('beer', 'direct_message,direct_mention,mention', function(bot, message) {
+
+  // if (JSON.stringify(message) !== undefined) {
+  //   controller.log('beer...');
+  //   controller.log(JSON.stringify(message.intents.entities.intent.value));
+  //   bot.reply(message, 'found')
+  // }
+
+// });
+// botkit-middleware-witai
+
+// witbot
+// var Witbot = require('witbot');
+// var witbot = Witbot('');
+
+// // wire up DMs and direct mentions to wit.ai
+// controller.hears('.*', incomingEvent, function (bot, message) {
+
+//   bot.reply(message, 'WitAI ...');
+//   bot.reply(message, message.text);
+
+//   var wit = witbot.process(message.text, bot, message)
+
+//   wit.hears('beer', 0.53, function (bot, message, outcome) {
+    
+//     bot.reply(message, message.entities)
+
+//   })
+// })
+// witbot
+
+// botkit-witai
+var wit = require('botkit-witai')({
+  // accessToken: 'BMRQUFXI3XQ3FCAOLWFM24QW3YUZ7UA5',
+  accessToken: process.env.wit_ai_token,
+  minConfidence: 0.6,
+  logLevel: 'error'
+});
+
+controller.middleware.receive.use(wit.receive);
+
+controller.hears(['.*'], incomingEvent, function (bot, message) {
+
+  // controller.log( JSON.stringify(message) );
+  if (message != undefined && message.entities != undefined) {
+
+    var intent = message.entities.intent[0].value;
+    var intent_type = intent + '_type';
+    var type = message.entities[intent_type][0].value;
+
+    controller.log( intent );
+    controller.log( intent_type );
+
+    // var text = intent_text(intent, intent_type);
+
+    if (intent==='wiki') {
+      request({
+        method: 'get',
+        uri: 'https://jsonplaceholder.typicode.com/posts?q='+fake_value,
+        json: true,
+      }, function (err, response, json) {
+    
+        controller.log(JSON.stringify(json));
+
+        var attachment_mesages = [];
+    
+        for(var i = 0; i < json.length; i++) {
+          attachment_mesages.push([
+            {
+              "title": json[i].title,
+              "title_link":  'http://wiki.weknoincs.com/'+intent_type,
+              "text":  json[i].body,
+            }
+          ]);
+        }
+
+        controller.log( attachment_mesages );
+
+
+        bot.reply(message, { attachments: attachment_mesages } );      
+    
+      });
+    }
+
+    
+
+    controller.log(text);
+  
+    bot.reply(message, 'intent: ' + intent + ', type: ' + type);
+    if (text) {
+      bot.reply(message, text);
+    }
+  }
+  
+});
+// botkit-witai
 
 controller.startTicking();
 
@@ -168,7 +278,7 @@ if (!process.env.clientId || !process.env.clientSecret) {
 
   var where_its_at = 'https://' + process.env.PROJECT_DOMAIN + '.glitch.me/';
   console.log('WARNING: This application is not fully configured to work with Slack. Please see instructions at ' + where_its_at);
-}else {
+} else {
 
   webserver.get('/', function(req, res){
     res.render('index', {
@@ -238,3 +348,45 @@ function usage_tip() {
     console.log('Get a Botkit Studio token here: https://studio.botkit.ai/')
     console.log('~~~~~~~~~~');
 }
+
+
+// function intent_text(intent, intent_type) {
+
+//   if (intent==='wiki') {
+//     return fetch_wiki(intent_type);
+//   }
+
+//   return text;
+// }
+
+// function fetch_wiki(intent_type) {
+
+//   var values = ['lorem', 'ipsum', 'dolor'];
+//   let fake_value = values[Math.floor(Math.random()*values.length)];
+
+//   request({
+//     method: 'get',
+//     uri: 'https://jsonplaceholder.typicode.com/posts?q='+fake_value,
+//     json: true,
+//   }, function (err, response, json) {
+
+//     controller.log(JSON.stringify(json));
+//     var attachment_mesages = [];
+
+//     for(var i = 0; i < json.length; i++) {
+//       attachment_mesages.push([
+//         {
+//           "title": json[i].title,
+//           "title_link":  'http://wiki.weknoincs.com/'+intent_type,
+//           "text":  json[i].body,
+//         }
+//       ]);
+//     }    
+
+//     return {
+//       attachments: attachment_mesages
+//     }
+
+//   });
+
+// }
