@@ -30,3 +30,8 @@
                 secretKeyRef:
                   name: tokens
                   key: clientSecret
+            - name: wit_ai_token
+              valueFrom:
+                secretKeyRef:
+                  name: tokens
+                  key: wit_ai_token

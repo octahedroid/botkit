@@ -192,7 +192,6 @@ controller.hears(['show crypto prices'], incomingEvent, function(bot, message) {
 
 // botkit-witai
 var wit = require('botkit-witai')({
-  // accessToken: 'BMRQUFXI3XQ3FCAOLWFM24QW3YUZ7UA5',
   accessToken: process.env.wit_ai_token,
   minConfidence: 0.6,
   logLevel: 'error'
