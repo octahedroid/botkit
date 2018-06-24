@@ -14,7 +14,7 @@
       spec: 
         containers: 
           - name: botkit
-            image: "gcr.io/bot-weknowinc/botkit:0.1"
+            image: "gcr.io/bot-weknowinc/botkit:0.5"
             ports: 
               - containerPort: 8080
             env:

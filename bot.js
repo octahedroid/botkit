@@ -146,50 +146,6 @@ controller.hears(['show crypto prices'], incomingEvent, function(bot, message) {
 
 });
 
-// botkit-middleware-witai
-// var wit = require('botkit-middleware-witai')({
-//   // token: process.env.wit,
-//   token: '',
-// });
-
-// var bot = controller.spawn({
-//   // token: process.env.token,
-//   token: 'eOg5Q4lwLYr0Et0y6Jrq5Ge0'
-// });
-
-// controller.middleware.receive.use(wit.receive);
-
-// controller.hears('beer', 'direct_message,direct_mention,mention', function(bot, message) {
-
-  // if (JSON.stringify(message) !== undefined) {
-  //   controller.log('beer...');
-  //   controller.log(JSON.stringify(message.intents.entities.intent.value));
-  //   bot.reply(message, 'found')
-  // }
-
-// });
-// botkit-middleware-witai
-
-// witbot
-// var Witbot = require('witbot');
-// var witbot = Witbot('');
-
-// // wire up DMs and direct mentions to wit.ai
-// controller.hears('.*', incomingEvent, function (bot, message) {
-
-//   bot.reply(message, 'WitAI ...');
-//   bot.reply(message, message.text);
-
-//   var wit = witbot.process(message.text, bot, message)
-
-//   wit.hears('beer', 0.53, function (bot, message, outcome) {
-    
-//     bot.reply(message, message.entities)
-
-//   })
-// })
-// witbot
-
 // botkit-witai
 var wit = require('botkit-witai')({
   accessToken: process.env.wit_ai_token,
@@ -201,7 +157,8 @@ controller.middleware.receive.use(wit.receive);
 
 controller.hears(['.*'], incomingEvent, function (bot, message) {
 
-  // controller.log( JSON.stringify(message) );
+  controller.log( JSON.stringify(message) );
+
   if (message != undefined && message.entities != undefined) {
 
     var intent = message.entities.intent[0].value;
@@ -211,9 +168,15 @@ controller.hears(['.*'], incomingEvent, function (bot, message) {
     controller.log( intent );
     controller.log( intent_type );
 
-    // var text = intent_text(intent, intent_type);
+    bot.reply(message, 'intent: ' + intent + ', type: ' + type);
 
     if (intent==='wiki') {
+
+      var values = ['lorem', 'ipsum', 'dolor'];
+      let fake_value = values[Math.floor(Math.random()*values.length)];
+
+      controller.log( fake_value );
+
       request({
         method: 'get',
         uri: 'https://jsonplaceholder.typicode.com/posts?q='+fake_value,
@@ -221,35 +184,24 @@ controller.hears(['.*'], incomingEvent, function (bot, message) {
       }, function (err, response, json) {
     
         controller.log(JSON.stringify(json));
-
-        var attachment_mesages = [];
     
         for(var i = 0; i < json.length; i++) {
-          attachment_mesages.push([
-            {
-              "title": json[i].title,
-              "title_link":  'http://wiki.weknoincs.com/'+intent_type,
-              "text":  json[i].body,
-            }
-          ]);
+        
+          bot.reply(message, {
+            attachments: [
+              {
+                "title": json[i].title,
+                "title_link": 'http://wiki.weknoincs.com/'+intent_type,
+                "text":  json[i].body,
+              }
+            ]
+          });
+
         }
-
-        controller.log( attachment_mesages );
-
-
-        bot.reply(message, { attachments: attachment_mesages } );      
     
       });
     }
 
-    
-
-    controller.log(text);
-  
-    bot.reply(message, 'intent: ' + intent + ', type: ' + type);
-    if (text) {
-      bot.reply(message, text);
-    }
   }
   
 });
@@ -347,45 +299,3 @@ function usage_tip() {
     console.log('Get a Botkit Studio token here: https://studio.botkit.ai/')
     console.log('~~~~~~~~~~');
 }
-
-
-// function intent_text(intent, intent_type) {
-
-//   if (intent==='wiki') {
-//     return fetch_wiki(intent_type);
-//   }
-
-//   return text;
-// }
-
-// function fetch_wiki(intent_type) {
-
-//   var values = ['lorem', 'ipsum', 'dolor'];
-//   let fake_value = values[Math.floor(Math.random()*values.length)];
-
-//   request({
-//     method: 'get',
-//     uri: 'https://jsonplaceholder.typicode.com/posts?q='+fake_value,
-//     json: true,
-//   }, function (err, response, json) {
-
-//     controller.log(JSON.stringify(json));
-//     var attachment_mesages = [];
-
-//     for(var i = 0; i < json.length; i++) {
-//       attachment_mesages.push([
-//         {
-//           "title": json[i].title,
-//           "title_link":  'http://wiki.weknoincs.com/'+intent_type,
-//           "text":  json[i].body,
-//         }
-//       ]);
-//     }    
-
-//     return {
-//       attachments: attachment_mesages
-//     }
-
-//   });
-
-// }
