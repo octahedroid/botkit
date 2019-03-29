@@ -52,9 +52,16 @@ This bot demonstrates many of the core features of Botkit:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+var fs = require('fs');
 var env = require('node-env-file');
 
-env(__dirname + '/.env');
+const envFile = __dirname + '/.env';
+
+console.log(envFile);
+
+if (fs.existsSync(envFile)) {
+  env(envFile);
+}
 
 if (!process.env.clientId || !process.env.clientSecret || !process.env.PORT) {
   usage_tip();
@@ -149,7 +156,7 @@ controller.hears(['show crypto prices'], incomingEvent, function(bot, message) {
 // botkit-witai
 var wit = require('botkit-witai')({
   accessToken: process.env.wit_ai_token,
-  minConfidence: 0.6,
+  minConfidence: 0.1,
   logLevel: 'error'
 });
 
@@ -165,27 +172,33 @@ controller.hears(['.*'], incomingEvent, function (bot, message) {
     var intent_type = intent + '_type';
     var type = message.entities[intent_type][0].value;
 
-    controller.log( intent );
-    controller.log( intent_type );
+    // controller.log( `intent: ${intent}` );
+    // controller.log( `intent_type: ${intent_type}` );
+    // controller.log( `type: ${type}` );
 
-    bot.reply(message, 'intent: ' + intent + ', type: ' + type);
+    bot.reply(`intent: ${intent}, type: ${type}`);
+
+    controller.log( `intent: ${intent}, intent_type: ${intent_type}, type: ${type}`);
 
     if (intent==='wiki') {
 
-      var values = ['lorem', 'ipsum', 'dolor'];
-      let fake_value = values[Math.floor(Math.random()*values.length)];
+      // var values = ['lorem', 'ipsum', 'dolor'];
+      // let fake_value = values[Math.floor(Math.random()*values.length)];
 
-      controller.log( fake_value );
+      const total = (Math.floor(Math.random() * (1 - 5 + 1)) + 5);
+      // controller.reply( fake_value );
+      bot.reply( `results: ${total}` );
+      controller.log( `results: ${total}` );
 
       request({
         method: 'get',
-        uri: 'https://jsonplaceholder.typicode.com/posts?q='+fake_value,
+        uri: 'https://jsonplaceholder.typicode.com/posts?q='+type,
         json: true,
       }, function (err, response, json) {
     
         controller.log(JSON.stringify(json));
     
-        for(var i = 0; i < json.length; i++) {
+        for(var i = 0; i <= total; i++) {
         
           bot.reply(message, {
             attachments: [
