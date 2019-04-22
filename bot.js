@@ -23,13 +23,9 @@ This bot demonstrates many of the core features of Botkit:
 
     -> http://api.slack.com
 
-  Get a Botkit Studio token from Botkit.ai:
-
-    -> https://studio.botkit.ai/
-
   Run your bot from the command line:
 
-    clientId=<MY SLACK TOKEN> clientSecret=<my client secret> PORT=<3000> studio_token=<MY BOTKIT STUDIO TOKEN> node bot.js
+    clientId=<MY SLACK TOKEN> clientSecret=<my client secret> PORT=<3000> node bot.js
 
 # USE THE BOT:
 
@@ -51,17 +47,9 @@ This bot demonstrates many of the core features of Botkit:
     -> http://howdy.ai/botkit
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-var fs = require('fs');
 var env = require('node-env-file');
+env(__dirname + '/.env');
 
-const envFile = __dirname + '/.env';
-
-console.log(envFile);
-
-if (fs.existsSync(envFile)) {
-  env(envFile);
-}
 
 if (!process.env.clientId || !process.env.clientSecret || !process.env.PORT) {
   usage_tip();
@@ -75,7 +63,8 @@ var request = require('request');
 var bot_options = {
     clientId: process.env.clientId,
     clientSecret: process.env.clientSecret,
-    // debug: true,
+    clientSigningSecret: process.env.clientSigningSecret,
+    debug: true,
     scopes: ['bot'],
     studio_token: process.env.studio_token,
     studio_command_uri: process.env.studio_command_uri
@@ -93,6 +82,17 @@ if (process.env.MONGO_URI) {
 // Create the Botkit controller, which controls all instances of the bot.
 var controller = Botkit.slackbot(bot_options);
 
+
+// Add Wit.ai middleware using middleware
+var wit = require('botkit-witai')({
+  accessToken: process.env.wit_ai_token,
+  minConfidence: 0.1,
+  logLevel: 'error'
+});
+
+controller.middleware.receive.use(wit.receive);
+
+// Define Wit.ai custom listeners
 let incomingEvent = 'direct_message,direct_mention,mention,ambient';
 
 controller.hears(['hi'], incomingEvent, function(bot, message) {
@@ -108,9 +108,7 @@ controller.hears(['hola', 'que tal'], incomingEvent, function(bot, message) {
 });
 
 controller.hears(['Open the pod bay doors'], incomingEvent, function(bot, message) {
-
   bot.reply(message, '...');
-
   bot.reply(message, {
       attachments:[
         {
@@ -120,11 +118,9 @@ controller.hears(['Open the pod bay doors'], incomingEvent, function(bot, messag
         }
       ]
   });
-
 });
 
 controller.hears(['show crypto prices'], incomingEvent, function(bot, message) {
-
   bot.reply(message, 'fetching information ...');
 
   request({
@@ -137,88 +133,69 @@ controller.hears(['show crypto prices'], incomingEvent, function(bot, message) {
 
     controller.log(JSON.stringify(json));
 
-    for(var i = 0; i < json.payload.length; i++) {
-        bot.reply(message, {
-          attachments: [
-            {
-              "title": json.payload[i].book,
-              "text":  JSON.stringify(json.payload[i], undefined, 2),
-              "color":  colors[Math.floor(Math.random()*colors.length)]
-            }
-          ]
+    for (var i = 0; i < json.payload.length; i++) {
+      bot.reply(message, {
+        attachments: [
+          {
+            "title": json.payload[i].book,
+            "text":  JSON.stringify(json.payload[i], undefined, 2),
+            "color":  colors[Math.floor(Math.random() * colors.length)]
+          }
+        ]
       });
     }
-
   });
-
 });
-
-// botkit-witai
-var wit = require('botkit-witai')({
-  accessToken: process.env.wit_ai_token,
-  minConfidence: 0.1,
-  logLevel: 'error'
-});
-
-controller.middleware.receive.use(wit.receive);
 
 controller.hears(['.*'], incomingEvent, function (bot, message) {
-
   controller.log( JSON.stringify(message) );
 
   if (message != undefined && message.entities != undefined) {
 
-    var intent = message.entities.intent[0].value;
-    var intent_type = intent + '_type';
-    var type = message.entities[intent_type][0].value;
+    var intent =
+      ('intent' in message.entities && message.entities.intent[0].value) ||
+      false;
+    var itemTypeKey =
+      (intent && `${intent}_type`)
+      || false;
+    var intentType =
+      (itemTypeKey in message.entities && message.entities[itemTypeKey][0].value)
+      || false;
 
-    // controller.log( `intent: ${intent}` );
-    // controller.log( `intent_type: ${intent_type}` );
-    // controller.log( `type: ${type}` );
+    controller.log( `intent: ${intent}, itemTypeKey: ${itemTypeKey}, type: ${intentType}`);
 
-    bot.reply(`intent: ${intent}, type: ${type}`);
+    if (intent === 'wiki' && intent && itemTypeKey) {
 
-    controller.log( `intent: ${intent}, intent_type: ${intent_type}, type: ${type}`);
-
-    if (intent==='wiki') {
-
-      // var values = ['lorem', 'ipsum', 'dolor'];
-      // let fake_value = values[Math.floor(Math.random()*values.length)];
+      bot.reply(message, '🧐 please wait a moment while I think...');
 
       const total = (Math.floor(Math.random() * (1 - 5 + 1)) + 5);
-      // controller.reply( fake_value );
-      bot.reply( `results: ${total}` );
       controller.log( `results: ${total}` );
 
       request({
         method: 'get',
-        uri: 'https://jsonplaceholder.typicode.com/posts?q='+type,
+        uri: 'https://jsonplaceholder.typicode.com/posts',
         json: true,
       }, function (err, response, json) {
-    
         controller.log(JSON.stringify(json));
     
-        for(var i = 0; i <= total; i++) {
-        
+        for (var i = 0; i <= total; i++) {      
           bot.reply(message, {
             attachments: [
               {
                 "title": json[i].title,
-                "title_link": 'http://wiki.weknoincs.com/'+intent_type,
+                "title_link": `https://jsonplaceholder.typicode.com/posts/${json[i].id}`,
                 "text":  json[i].body,
               }
             ]
           });
-
         }
-    
       });
+    } else {
+      controller.log(`I couldn't understand the request`);
     }
-
-  }
-  
+  }  
 });
-// botkit-witai
+
 
 controller.startTicking();
 
@@ -232,7 +209,6 @@ if (!process.env.clientId || !process.env.clientSecret) {
 
   webserver.get('/', function(req, res){
     res.render('installation', {
-      studio_enabled: controller.config.studio_token ? true : false,
       domain: req.get('host'),
       protocol: req.protocol,
       glitch_domain:  process.env.PROJECT_DOMAIN,
@@ -240,7 +216,7 @@ if (!process.env.clientId || !process.env.clientSecret) {
     });
   })
 
-  var where_its_at = 'https://' + process.env.PROJECT_DOMAIN + '.glitch.me/';
+  var where_its_at = 'http://' + (process.env.PROJECT_DOMAIN ? process.env.PROJECT_DOMAIN+ '.glitch.me/' : 'localhost:' + process.env.PORT || 3000);
   console.log('WARNING: This application is not fully configured to work with Slack. Please see instructions at ' + where_its_at);
 } else {
 
@@ -262,9 +238,6 @@ if (!process.env.clientId || !process.env.clientSecret) {
   // Load in some helpers that make running Botkit on Glitch.com better
   require(__dirname + '/components/plugin_glitch.js')(controller);
 
-  // enable advanced botkit studio metrics
-  require('botkit-studio-metrics')(controller);
-
   var normalizedPath = require("path").join(__dirname, "skills");
   require("fs").readdirSync(normalizedPath).forEach(function(file) {
     require("./skills/" + file)(controller);
@@ -272,7 +245,7 @@ if (!process.env.clientId || !process.env.clientSecret) {
 
   // This captures and evaluates any message sent to the bot as a DM
   // or sent to the bot in the form "@bot message" and passes it to
-  // Botkit Studio to evaluate for trigger words and patterns.
+  // Botkit CMS to evaluate for trigger words and patterns.
   // If a trigger is matched, the conversation will automatically fire!
   // You can tie into the execution of the script using the functions
   // controller.studio.before, controller.studio.after and controller.studio.validate
@@ -282,7 +255,7 @@ if (!process.env.clientId || !process.env.clientSecret) {
               if (!convo) {
                   // no trigger was matched
                   // If you want your bot to respond to every message,
-                  // define a 'fallback' script in Botkit Studio
+                  // define a 'fallback' script in Botkit CMS
                   // and uncomment the line below.
                   // controller.studio.run(bot, 'fallback', message.user, message.channel);
               } else {
@@ -291,14 +264,14 @@ if (!process.env.clientId || !process.env.clientSecret) {
                   convo.setVar('current_time', new Date());
               }
           }).catch(function(err) {
-              bot.reply(message, 'I experienced an error with a request to Botkit Studio: ' + err);
-              debug('Botkit Studio: ', err);
+              bot.reply(message, 'I experienced an error with a request to Botkit CMS: ' + err);
+              debug('Botkit CMS: ', err);
           });
       });
   } else {
       console.log('~~~~~~~~~~');
-      console.log('NOTE: Botkit Studio functionality has not been enabled');
-      console.log('To enable, pass in a studio_token parameter with a token from https://studio.botkit.ai/');
+      console.log('NOTE: Botkit CMS functionality has not been enabled');
+      console.log('Learn mode https://github.com/howdyai/botkit-cms');
   }
 }
 
@@ -307,8 +280,7 @@ function usage_tip() {
     console.log('~~~~~~~~~~');
     console.log('Botkit Starter Kit');
     console.log('Execute your bot application like this:');
-    console.log('clientId=<MY SLACK CLIENT ID> clientSecret=<MY CLIENT SECRET> PORT=3000 studio_token=<MY BOTKIT STUDIO TOKEN> node bot.js');
+    console.log('clientId=<MY SLACK CLIENT ID> clientSecret=<MY CLIENT SECRET> PORT=3000 node bot.js');
     console.log('Get Slack app credentials here: https://api.slack.com/apps')
-    console.log('Get a Botkit Studio token here: https://studio.botkit.ai/')
     console.log('~~~~~~~~~~');
 }
